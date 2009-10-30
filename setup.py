@@ -5,7 +5,7 @@ version = '0.1'
 
 setup(name='raptus.mercurialstorage',
       version=version,
-      description="",
+      description="provides an archetypes storage which stores files on the filesystem into a mercurial repository",
       long_description=open("README.txt").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
