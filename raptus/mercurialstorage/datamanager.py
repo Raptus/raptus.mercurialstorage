@@ -42,7 +42,7 @@ class MercurialDataManager(object):
             email = portal.getProperty('email_from_address', '')
             name = portal.getProperty('email_from_name', '')
         tmp = tempfile.NamedTemporaryFile()
-        os.system('hg commit --addremove -v -m "%s" -u "%s <%s>" %s > %s' % (self.message, name, email, self.path, tmp.name))
+        os.system('hg commit --addremove -v -m "%s" -u "%s <%s>" -R %s > %s' % (self.message, name, email, self.path, tmp.name))
         output = tmp.read()
         if not 'nothing changed' in output:
             info('\n'+output.strip())
