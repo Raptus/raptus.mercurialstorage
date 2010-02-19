@@ -40,10 +40,12 @@ def _unmark_asynch(obj):
     obj.asynch = False
         
 class BaseAction(Persistent):
+    _mark = True
     
     def __init__(self, context):
         Persistent.__init__(self)
-        _mark_asynch(context)
+        if self._mark:
+            _mark_asynch(context)
         portal_state = getMultiAdapter((context, context.REQUEST), name=u'plone_portal_state')
         self.userid = portal_state.member().getId()
         self.uid = context.UID()
@@ -71,6 +73,13 @@ class BaseAction(Persistent):
         if obj:
             _unmark_asynch(obj)
         setSecurityManager(sm)
+        
+    def __eq__(self, other):
+        if isinstance(other, self.__class__) and \
+           self.uid == other.uid and \
+           self.userid == other.userid:
+            return 1
+        return 0
 
 class SetAction(BaseAction):
     implements(IAction)
@@ -101,6 +110,15 @@ class SetAction(BaseAction):
     def __str__(self):
         return '<SetAction uid="%s" name="%s" userid="%s" rename="%s" copy="%s">' % (self.uid, self.name, self.userid, self.copying, self.renaming)
         
+    def __eq__(self, other):
+        if super(SetAction, self).__eq__(other) and \
+           self.name == other.name and \
+           self.value == other.value and \
+           self.renaming == other.renaming and \
+           self.copying == other.copying:
+            return 1
+        return 0
+        
 class UnsetAction(BaseAction):
     implements(IAction)
     
@@ -119,6 +137,12 @@ class UnsetAction(BaseAction):
     def __str__(self):
         return '<UnsetAction path="%s">' % self.path
         
+    def __eq__(self, other):
+        if super(UnsetAction, self).__eq__(other) and \
+           self.path == other.path:
+            return 1
+        return 0
+        
 class CleanupAction(BaseAction):
     implements(IAction)
     
@@ -136,6 +160,12 @@ class CleanupAction(BaseAction):
             
     def __str__(self):
         return '<CleanupAction path="%s">' % self.path
+        
+    def __eq__(self, other):
+        if super(CleanupAction, self).__eq__(other) and \
+           self.path == other.path:
+            return 1
+        return 0
 
 class ProcessorLock(object):
     _lock = False
@@ -162,13 +192,18 @@ class Processor(BrowserView):
             if not annotations.has_key(QUEUE_KEY):
                 return
             queue = annotations[QUEUE_KEY]
+            previous = None
             while len(queue):
                 transaction.begin()
                 action = queue.pop(0)
+                if action == previous:
+                    info('skipping action %s' % action)
+                    continue
                 info('starting action %s' % action)
                 try:
                     action.execute(self.context)
                     transaction.commit()
+                    previous = action
                     info('action finished %s' % action)
                 except Exception, e:
                     transaction.abort()
@@ -196,11 +231,15 @@ class ActionHook(object):
         if committed:
             plone = getSite()
             key = QUEUE_KEY
+            annotations = IAnnotations(plone)
             if processor_lock.locked():
                 key = QUEUE_LAZY_KEY
-            annotations = IAnnotations(plone)
             if not annotations.has_key(key):
                 annotations[key] = PersistentList()
+            if len(annotations[key]) and \
+               self.action == annotations[key][-1]:
+                info('skipping action %s' % self.action)
+                return
             annotations[key].append(self.action)
             transaction.commit()
             info('appended action %s' % self.action)
