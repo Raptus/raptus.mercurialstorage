@@ -5,6 +5,7 @@ Changelog
 ------------------
 
 * improved queue to compare appended action with previous ones and skipping them if needed
+* bugfix in datamanager (repo not found under linux)
 
 0.1 - (2009-10-30)
 ------------------
