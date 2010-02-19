@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.3 - (2010-02-19)
+------------------
+
+* bugfix in datamanager (no longer logs empty lines)
+* bugfix in queue (commit transaction after changing asynch flag)
+
 0.2 - (2010-02-19)
 ------------------
 

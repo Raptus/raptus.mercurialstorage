@@ -46,6 +46,7 @@ class BaseAction(Persistent):
         Persistent.__init__(self)
         if self._mark:
             _mark_asynch(context)
+            transaction.commit()
         portal_state = getMultiAdapter((context, context.REQUEST), name=u'plone_portal_state')
         self.userid = portal_state.member().getId()
         self.uid = context.UID()
@@ -72,6 +73,7 @@ class BaseAction(Persistent):
     def post_execute(self, obj, sm):
         if obj:
             _unmark_asynch(obj)
+            transaction.commit()
         setSecurityManager(sm)
         
     def __eq__(self, other):
