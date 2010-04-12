@@ -241,7 +241,7 @@ class ExternalMercurialStorage(ExternalStorage):
             path = os.path.dirname(path)
         if len(os.listdir(path)) > 0:
             return
-        while len(os.listdir(path)) <= 1 and not path == self.getRootPath():
+        if not path == self.getRootPath():
             os.rmdir(path)
-            path = os.path.dirname(path)
+            self.recursiveDelete(os.path.dirname(path))
         
