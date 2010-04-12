@@ -4,6 +4,8 @@ Changelog
 0.4 - (2010-04-12)
 ------------------
 
+* fixed README.txt (adjusted patch file location)
+* fixed ReST format (README)
 * bugfix in recursiveDelete method which raised an exception in some cases and caused the action queue to hang
 
 0.3 - (2010-02-19)
