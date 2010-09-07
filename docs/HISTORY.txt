@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0a1 - (2010-08-07)
+--------------------
+
+* improved queue processing (now using thread safe reentrant locks)
+
 0.4 - (2010-04-12)
 ------------------
 

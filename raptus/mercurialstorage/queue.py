@@ -1,4 +1,5 @@
 import os, sys, time, traceback, transaction
+from threading import RLock
 from Persistence import Persistent
 from persistent.list import PersistentList
 
@@ -169,34 +170,22 @@ class CleanupAction(BaseAction):
             return 1
         return 0
 
-class ProcessorLock(object):
-    _lock = False
-    
-    def unlock(self):
-        self._lock = False
-        
-    def lock(self):
-        self._lock = True
-        
-    def locked(self):
-        return self._lock
-    
-processor_lock = ProcessorLock()
+processor_lock = RLock()
+processor_lazy_lock = RLock()
 
 class Processor(BrowserView):
     
     def __call__(self):
-        if processor_lock.locked(): # processing already started
+        if not processor_lock.acquire(False):
             return
         try:
-            processor_lock.lock()
             annotations = IAnnotations(self.context)
             if not annotations.has_key(QUEUE_KEY):
                 return
             queue = annotations[QUEUE_KEY]
             previous = None
             while len(queue):
-                transaction.begin()
+                sp = transaction.savepoint(optimistic=True)
                 action = queue.pop(0)
                 if action == previous:
                     info('skipping action %s' % action)
@@ -204,25 +193,27 @@ class Processor(BrowserView):
                 info('starting action %s' % action)
                 try:
                     action.execute(self.context)
-                    transaction.commit()
                     previous = action
                     info('action finished %s' % action)
                 except Exception, e:
-                    transaction.abort()
+                    sp.rollback()
                     exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
                     info('action failed %s\n%s' % (action, ''.join(traceback.format_exception(exceptionType, exceptionValue, exceptionTraceback))))
                     break
         finally:
-            annotations = IAnnotations(self.context)
-            if not annotations.has_key(QUEUE_KEY):
-                annotations[QUEUE_KEY] = PersistentList()
-            queue = annotations[QUEUE_KEY]
-            if annotations.has_key(QUEUE_LAZY_KEY):
-                queue_lazy = annotations[QUEUE_LAZY_KEY]
-                while len(queue_lazy):
-                    queue.append(queue_lazy.pop(0))
-            transaction.commit()
-            processor_lock.unlock()
+            processor_lazy_lock.acquire()
+            try:
+                annotations = IAnnotations(self.context)
+                if not annotations.has_key(QUEUE_KEY):
+                    annotations[QUEUE_KEY] = PersistentList()
+                queue = annotations[QUEUE_KEY]
+                if annotations.has_key(QUEUE_LAZY_KEY):
+                    queue_lazy = annotations[QUEUE_LAZY_KEY]
+                    while len(queue_lazy):
+                        queue.append(queue_lazy.pop(0))
+            finally:
+                processor_lazy_lock.release()
+            processor_lock.release()
 
 class ActionHook(object):
     
@@ -231,20 +222,22 @@ class ActionHook(object):
         
     def __call__(self, committed):
         if committed:
-            plone = getSite()
-            key = QUEUE_KEY
-            annotations = IAnnotations(plone)
-            if processor_lock.locked():
+            processor_lazy_lock.acquire()
+            try:
+                plone = getSite()
                 key = QUEUE_LAZY_KEY
-            if not annotations.has_key(key):
-                annotations[key] = PersistentList()
-            if len(annotations[key]) and \
-               self.action == annotations[key][-1]:
-                info('skipping action %s' % self.action)
-                return
-            annotations[key].append(self.action)
-            transaction.commit()
-            info('appended action %s' % self.action)
+                annotations = IAnnotations(plone)
+                if not annotations.has_key(key):
+                    annotations[key] = PersistentList()
+                if len(annotations[key]) and \
+                   self.action == annotations[key][-1]:
+                    info('skipping action %s' % self.action)
+                else:
+                    annotations[key].append(self.action)
+                    transaction.commit()
+                    info('appended action %s' % self.action)
+            finally:
+                processor_lazy_lock.release()
 
 def append(action):
     transaction.get().addAfterCommitHook(ActionHook(action))
