@@ -180,6 +180,17 @@ class Processor(BrowserView):
             return
         try:
             annotations = IAnnotations(self.context)
+            processor_lazy_lock.acquire()
+            try:
+                if not annotations.has_key(QUEUE_KEY):
+                    annotations[QUEUE_KEY] = PersistentList()
+                queue = annotations[QUEUE_KEY]
+                if annotations.has_key(QUEUE_LAZY_KEY):
+                    queue_lazy = annotations[QUEUE_LAZY_KEY]
+                    while len(queue_lazy):
+                        queue.append(queue_lazy.pop(0))
+            finally:
+                processor_lazy_lock.release()
             if not annotations.has_key(QUEUE_KEY):
                 return
             queue = annotations[QUEUE_KEY]
@@ -201,18 +212,6 @@ class Processor(BrowserView):
                     info('action failed %s\n%s' % (action, ''.join(traceback.format_exception(exceptionType, exceptionValue, exceptionTraceback))))
                     break
         finally:
-            processor_lazy_lock.acquire()
-            try:
-                annotations = IAnnotations(self.context)
-                if not annotations.has_key(QUEUE_KEY):
-                    annotations[QUEUE_KEY] = PersistentList()
-                queue = annotations[QUEUE_KEY]
-                if annotations.has_key(QUEUE_LAZY_KEY):
-                    queue_lazy = annotations[QUEUE_LAZY_KEY]
-                    while len(queue_lazy):
-                        queue.append(queue_lazy.pop(0))
-            finally:
-                processor_lazy_lock.release()
             processor_lock.release()
 
 class ActionHook(object):

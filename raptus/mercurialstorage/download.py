@@ -24,10 +24,10 @@ class Download(BrowserView):
         storage = field.getStorage(self.context)
         info = storage.getInfoByRevision(self.context, name, rev)
         if not info:
-            return
+            return field.download(self.context)
         contents = storage.getByRevision(self.context, name, rev)
         
-        filename = info['filename']
+        filename = field.getFilename(self.context)
         if not filename:
             filename = os.path.basename(info['filepath'])
         kwargs = {'filename': filename,
