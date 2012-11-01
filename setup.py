@@ -6,7 +6,7 @@ version = '1.0b2'
 setup(name='raptus.mercurialstorage',
       version=version,
       description="provides an archetypes storage which stores files on the filesystem into a mercurial repository",
-      long_description=open("README.txt").read() + "\n" +
+      long_description=open("README.rst").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[
@@ -17,7 +17,7 @@ setup(name='raptus.mercurialstorage',
       keywords='plone archetypes storage mercurial',
       author='Raptus AG',
       author_email='dev@raptus.com',
-      url='https://svn.plone.org/svn/collective/raptus.mercurialstorage',
+      url='https://github.com/Raptus/raptus.mercurialstorage',
       license='GPL',
       packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['raptus'],
