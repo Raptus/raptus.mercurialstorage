@@ -5,7 +5,7 @@ from zope.annotation import IAnnotations
 from Products.Five.browser import BrowserView
 from Products.Archetypes.utils import contentDispositionHeader
 
-# Import conditionally, so we don't introduce a hard depdendency
+# Import conditionally, so we don't introduce a hard dependency
 try:
     from plone.i18n.normalizer.interfaces import IUserPreferredFileNameNormalizer
     FILE_NORMALIZER = True

@@ -1,5 +1,3 @@
-import os, tempfile
-
 from AccessControl import getSecurityManager
 
 from transaction.interfaces import IDataManager
@@ -9,6 +7,7 @@ from zope.interface import implements
 
 from Products.CMFCore.utils import getToolByName
 
+from raptus.mercurialstorage import utils
 from raptus.mercurialstorage.logger import getLogger
 
 logger = getLogger(__name__)
@@ -27,7 +26,7 @@ class MercurialDataManager(object):
         self.userid = userid
         
     def abort(self, transaction):
-        os.system('hg revert --all -R %s' % self.path)
+        utils.system('hg revert --all -R %s' % self.path)
         
     def commit(self, transaction):
         portal = getSite()
@@ -41,12 +40,9 @@ class MercurialDataManager(object):
         if not email:
             email = portal.getProperty('email_from_address', '')
             name = portal.getProperty('email_from_name', '')
-        tmp = tempfile.NamedTemporaryFile()
-        os.system('hg commit --addremove -v -m "%s" -u "%s <%s>" -R %s > %s' % (self.message, name, email, self.path, tmp.name))
-        output = tmp.read().strip()
+        output = utils.system('hg commit --addremove -v -m "%s" -u "%s <%s>" -R %s' % (self.message, name, email, self.path))
         if output and not 'nothing changed' in output:
             info('\n'+output)
-        tmp.close()
 
     def tpc_begin(self, transaction):
         pass

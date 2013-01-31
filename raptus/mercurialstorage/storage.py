@@ -1,4 +1,4 @@
-import os, tempfile
+import os
 
 from Acquisition import aq_parent
 
@@ -20,7 +20,7 @@ from Products.ExternalStorage.filewrapper import FileWrapper
 
 from Products.Archetypes.interfaces.field import IObjectField
 
-from raptus.mercurialstorage import storage_registry
+from raptus.mercurialstorage import storage_registry, utils
 from raptus.mercurialstorage.queue import append, SetAction, UnsetAction, CleanupAction
 
 LOG_KEY = 'raptus.mercurialstorage.LOG'
@@ -150,7 +150,7 @@ class ExternalMercurialStorage(ExternalStorage):
             return
         try:
             data = PersistentDict()
-            data['filepath'] = self.getFilepath(instance, name).replace(self.getRootPath()+os.path.sep, '')
+            data['filepath'] = self.getFilepath(instance, name)
             data['filename'] = self.getFilename(instance, name)
             data['mimetype'] = self.getContentType(instance, name)
             annotations[LOG_KEY][name][revision] = data
@@ -171,7 +171,7 @@ class ExternalMercurialStorage(ExternalStorage):
             pass
         if instance.isTemporary():
             return
-        append(UnsetAction(instance, self.getFilepath(instance, name)))
+        append(UnsetAction(instance, os.path.join(self.getRootPath(), self.getFilepath(instance, name))))
 
     security.declarePrivate('_unset')
     def _unset(self, path, **kwargs):
@@ -199,11 +199,7 @@ class ExternalMercurialStorage(ExternalStorage):
         return path
     
     def getRevision(self, instance, name):
-        tmp = tempfile.NamedTemporaryFile()
-        os.system('hg tip -R %s --template "{node}" > %s' % (self.getRootPath(), tmp.name))
-        revision = tmp.read()
-        tmp.close()
-        return revision
+        return utils.system('hg tip -R %s --template "{node}"' % self.getRootPath())
         
     security.declarePrivate('getByRevision')
     def getByRevision(self, instance, name, rev):
@@ -211,19 +207,10 @@ class ExternalMercurialStorage(ExternalStorage):
         """
         info = dict(self.getInfoByRevision(instance, name, rev))
         filename = info['filename']
-        filepath = info['filepath']
+        filepath = os.path.join(self.getRootPath(), info['filepath'])
         if filename:
             filepath = os.path.join(filepath, filename)
-        if filepath.startswith(os.path.sep):
-            filepath = filepath[1:]
-        tmp = tempfile.NamedTemporaryFile()
-        cwd = os.getcwd()
-        os.chdir(self.getRootPath())
-        os.system('hg cat -r %s %s > %s' % (rev, filepath, tmp.name))
-        os.chdir(cwd)
-        output = tmp.read()
-        tmp.close()
-        return output
+        return utils.system('hg cat -R %s -r %s %s' % (self.getRootPath(), rev, filepath))
         
     security.declarePrivate('getInfoByRevision')
     def getInfoByRevision(self, instance, name, rev):

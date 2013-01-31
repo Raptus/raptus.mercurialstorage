@@ -45,3 +45,17 @@ zope-conf-additional variable:
 
 raptus.mercurialstorage logs to a different log file which is found in your log folder
 under the name mercurial.log.
+
+
+Migration from pre 1.0b3
+========================
+
+Products.ExternalStorage stores absolute file paths in the ZODB which makes moving existing
+plone instances a pain. This issue was fixed in version 1.0b3 of raptus.mercurialstorage.
+To migrate an existing plone site use the migrate script located in the scripts folder of the
+raptus.mercurialstorage egg. Information about the usage of the script are given by executing:
+
+::
+
+    bin/instance run path_to_the_script -h
+
