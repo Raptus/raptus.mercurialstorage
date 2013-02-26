@@ -1,10 +1,10 @@
 Changelog
 =========
 
-1.0b4 (unreleased)
+1.0b4 (2013-02-25)
 ------------------
 
-- Nothing changed yet.
+* improved hg execution (no PYTHONPATH modification anymore)
 
 
 1.0b3 (2013-01-31)
