@@ -1,10 +1,12 @@
 """
 migrate -- migrate an existing site using raptus.mercurialstorage pre 1.0b3
 
-Usage: bin/instance run path_to_this_script path_to_the_desired_plone_instance_in_zope [path_to_the_desired_plone_instance_in_zope] ..
+Usage: bin/instance run path_to_this_script [options] path_to_the_desired_plone_instance_in_zope [path_to_the_desired_plone_instance_in_zope] ..
 
 Options:
 -h/--help -- print usage message and exit
+-r pathToRemove -- removes the part from the stored path which is equal to pathToRemove
+-d -- dry run
 
 This script iterates over all objects in the given plone instances and
 adjusts the stored paths of the fields using ExternalStorage. The stored
@@ -82,9 +84,19 @@ def migrate_field(field, obj):
 def migrate_dict(d, root):
     migrated = False
     for name, value in d.items():
-        if isinstance(value, basestring) and name == 'filepath' and value.startswith(root):
-            d[name] = value[len(root):]
-            return True
+        if isinstance(value, basestring) and name == 'filepath':
+            print "  root is %s " % root
+            print "    current filepath is %s" % value
+            if value.startswith(root):
+                print "      new filepath will be %s" % value[len(root):]
+                if not dry:
+                    d[name] = value[len(root):]
+                return True
+            if pathToRemove and value.startswith(pathToRemove):
+                print "      new filepath will be %s" % value[len(pathToRemove):]
+                if not dry:
+                    d[name] = value[len(pathToRemove):]
+                return True
         if hasattr(value, 'items'):
             migrated = migrated or migrate_dict(value, root)
     return migrated
@@ -101,11 +113,19 @@ print """
 
 app = makerequest(app)
 args = sys.argv[1:]
+dry = False
+pathToRemove = False
 while len(args):
     path = args.pop(0)
     if path == '-h' or path == '--help':
         print __doc__
         break
+    if path == '-d':
+        dry = True
+        continue
+    if path == '-r':
+        pathToRemove = args.pop(0)
+        continue
     migrate(path)
 
 print """
