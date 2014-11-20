@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.0b5 (unreleased)
+1.0b5 (2014-11-20)
 ------------------
 
 * added dry run and remove path parameters to migration script
